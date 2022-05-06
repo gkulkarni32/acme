@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeconfig-local
+data: 
+  kubeconfig: |
+    current-context: localapiserver
+    apiVersion: v1
+    kind: Config
+    clusters:
+    - cluster:
+        api-version: v1
+        server: http://proxy-container:80
+        insecure-skip-tls-verify: true
+      name: localapiserver 
+    contexts:
+    - context:
+        cluster: localapiserver
+      name: localapiserver
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: static-scan-engine
+  labels:
+    control-plane: static-scan-engine
+spec:
+  selector:
+    matchLabels:
+      control-plane: static-scan-engine
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: static-scan-engine
+    spec:
+      containers:
+        -   
+          image: projects.registry.vmware.com/octo_data_platforms/static-scan-engine:04.05.2022.9
+          name: static-scan-engine
+          env:
+            - name: KUBECONFIG
+              value: /config/kubeconfig
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 128Mi
+          volumeMounts:
+            - mountPath: /config
+              name: config
+      volumes:
+        - name: config
+          configMap:
+            name: kubeconfig-local
+      terminationGracePeriodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: static-scan-engine
+spec:
+  selector:
+    control-plane: static-scan-engine
+  ports:
+    - name: http
+      protocol: TCP
+      port: 10010
+      targetPort: 10010
