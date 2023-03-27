@@ -21,7 +21,7 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: static-scan-engine
+  name: static-scan-engine1
   labels:
     control-plane: static-scan-engine
 spec:
